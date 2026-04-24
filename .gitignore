@@ -1,0 +1,15 @@
+# Environment
+.env
+venv/
+__pycache__/
+
+# Model files — use Git LFS or store separately
+# *.pkl  ← comment this out if you WANT to push the pkl files
+
+# Node
+node_modules/
+frontend/dist/
+
+# Jupyter
+.ipynb_checkpoints/
+notebook/.ipynb_checkpoints/
