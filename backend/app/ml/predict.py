@@ -25,6 +25,7 @@ SERVICE_MEAN_MIN = {
     "doctor":   12.0,   # observed median in Kaggle data
     "lab":      15.0,   # 1/µ = 60/4
     "pharmacy": 4.3,    # 1/µ = 60/14 (Bahadori)
+    "emergency": 10.0,
 }
 
 # Service-time variability multiplier used to derive a "P90" service estimate
@@ -130,9 +131,9 @@ def predict_patient_wait(station: str, position_in_queue: int = 0,
     base_p90 = max(base_p50, base_p90)  # P90 must be >= P50
 
     # Adjust for the current queue depth relative to the typical queue depth
-    # the model was trained on. We use a gentle linear scaling: extra delay
-    # accrues only for queue lengths that exceed server capacity.
-    extra_delay = max(0, position_in_queue - num_servers) * (SERVICE_MEAN_MIN.get(station, 5.0) / num_servers)
+    # the model was trained on. To make it strictly monotonically increasing 
+    # per patient (which feels correct to users), we scale directly by position.
+    extra_delay = (position_in_queue / num_servers) * SERVICE_MEAN_MIN.get(station, 5.0)
     p50 = base_p50 + extra_delay
     p90 = base_p90 + extra_delay * P90_MULTIPLIER
 

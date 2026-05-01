@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getStationQueue, advancePatient } from '../api/api';
-import { CheckCircle, Loader2, AlertOctagon, AlertTriangle, Activity } from 'lucide-react';
+import { CheckCircle, Loader2, AlertOctagon, AlertTriangle, Activity, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const ACUITY_STYLES = {
   1: { label: 'L1 Immediate',  cls: 'bg-alert-50 text-alert-900 ring-alert-600/30',          icon: AlertOctagon },
@@ -31,10 +32,10 @@ export default function StationPatientList({ station, onChange }) {
     // No internal polling — Dashboard already polls every 5s and re-renders us.
   }, [station]);
 
-  const handleComplete = async (patientId) => {
+  const handleComplete = async (patientId, nextJourney = null) => {
     setAdvancingId(patientId);
     try {
-      await advancePatient(patientId);
+      await advancePatient(patientId, nextJourney);
       await refresh();
       onChange?.();   // tell Dashboard to refresh its summary too
     } catch (err) {
@@ -108,18 +109,55 @@ export default function StationPatientList({ station, onChange }) {
                 <td className="px-2 py-2.5 text-right tnum text-ink-700">
                   {p.waitedMinutes} min
                 </td>
-                <td className="px-4 py-2.5 text-right">
-                  <button
-                    onClick={() => handleComplete(p.id)}
-                    disabled={isAdvancing}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11.5px] font-medium bg-bone-200/60 hover:bg-ink-900 hover:text-bone-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isAdvancing ? (
-                      <><Loader2 className="size-3 animate-spin" /> Advancing</>
-                    ) : (
-                      <><CheckCircle className="size-3" /> Mark complete</>
-                    )}
-                  </button>
+                <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                  {station === 'triage' && (
+                    <select
+                      className="mr-2 px-2.5 py-1 border border-bone-300 rounded text-[11.5px] font-medium bg-bone-50 text-ink-900 hover:bg-bone-100 outline-none focus:ring-1 focus:ring-ink-900 focus:border-ink-900 transition-colors cursor-pointer"
+                      onChange={(e) => {
+                        p._nextStep = e.target.value;
+                        setRows([...rows]); // force re-render
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="">Standard Triage</option>
+                      <option value="D">To Pharmacy (Refill)</option>
+                    </select>
+                  )}
+                  {station === 'doctor' && (
+                    <select
+                      className="mr-2 px-2.5 py-1 border border-bone-300 rounded text-[11.5px] font-medium bg-bone-50 text-ink-900 hover:bg-bone-100 outline-none focus:ring-1 focus:ring-ink-900 focus:border-ink-900 transition-colors cursor-pointer"
+                      onChange={(e) => p._nextStep = e.target.value}
+                      defaultValue="A"
+                    >
+                      <option value="A">To Pharmacy</option>
+                      <option value="B">To Lab (Return to me)</option>
+                      <option value="E">To Lab (No return)</option>
+                      <option value="F">To Lab → Pharmacy</option>
+                      <option value="DONE">Discharge</option>
+                    </select>
+                  )}
+                  
+                  {station === 'triage' && (!p._nextStep || p._nextStep === '') ? (
+                    <Link
+                      to="/triage"
+                      state={{ selectedPatientId: p.id }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11.5px] font-medium bg-triage-600 text-bone-50 hover:bg-triage-700 transition-colors"
+                    >
+                      Open Triage Desk <ArrowRight className="size-3" />
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => handleComplete(p.id, station === 'doctor' ? (p._nextStep || 'A') : (station === 'triage' ? p._nextStep : null))}
+                      disabled={isAdvancing}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11.5px] font-medium bg-bone-200/60 hover:bg-ink-900 hover:text-bone-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isAdvancing ? (
+                        <><Loader2 className="size-3 animate-spin" /> Advancing</>
+                      ) : (
+                        <><CheckCircle className="size-3" /> {station === 'emergency' ? 'Discharge' : (station === 'triage' && p._nextStep === 'D' ? 'Send to Pharmacy' : 'Mark complete')}</>
+                      )}
+                    </button>
+                  )}
                 </td>
               </tr>
             );

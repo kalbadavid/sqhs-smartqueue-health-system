@@ -1,11 +1,35 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+import re
 
 # ---------- Requests ----------
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=1, max_length=40)
+    email: str = Field(min_length=5, max_length=120)
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", v):
+            raise ValueError('Invalid email format')
+        return v.lower().strip()
+
+    @field_validator('phone')
+    @classmethod
+    def validate_nigerian_phone(cls, v: str) -> str:
+        # Remove spaces, dashes, and parentheses
+        cleaned = re.sub(r'[\s\-()]', '', v)
+        # Nigerian mobile numbers regex
+        pattern = r'^(?:\+234|234|0)([789][01]\d{8})$'
+        match = re.match(pattern, cleaned)
+        if not match:
+            raise ValueError('Invalid Nigerian phone number. Must be in the format +234XXXXXXXXXX or 0XXXXXXXXXX')
+        
+        # We can also normalize it right here so the DB only stores standard format
+        return f"+234{match.group(1)}"
+
 
 class TriageRequest(BaseModel):
     id: str
@@ -14,18 +38,21 @@ class TriageRequest(BaseModel):
 
 class CompleteRequest(BaseModel):
     patient_id: str
+    next_journey: Optional[str] = None
 
 # ---------- Responses ----------
 class RegisterResponse(BaseModel):
     id: str
     name: str
     phone: str
+    email: str
     position: int
 
 class PatientPublic(BaseModel):
     id: str
     name: str
     phone: str
+    email: str
     acuity: Optional[int] = None
     complaint: Optional[str] = None
     journey: Optional[str] = None
@@ -50,6 +77,7 @@ class QueueRow(BaseModel):
     id: str
     name: str
     phone: str
+    email: str
     acuity: Optional[int | str] = "—"
     complaint: Optional[str] = None
     waitedMinutes: int

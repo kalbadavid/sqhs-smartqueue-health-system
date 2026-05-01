@@ -4,12 +4,11 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.schemas import DashboardSummary, StationStats, Recommendation
 from app.services import queue_service
+from app.services.queue_service import SERVERS
 from app.ml.predict import predict_queue_wait
 from app.ml.loader import STATIONS, get_avg_mae
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
-
-SERVERS = {"triage": 2, "doctor": 3, "lab": 2, "pharmacy": 2}
 
 @router.get("/summary", response_model=DashboardSummary)
 def get_summary(db: Session = Depends(get_db)):

@@ -4,6 +4,9 @@ JOURNEYS = {
     "B": {"label": "Consultation + lab",   "path": ["triage", "doctor", "lab", "doctor", "pharmacy"]},
     "C": {"label": "Laboratory only",      "path": ["triage", "lab"]},
     "D": {"label": "Pharmacy refill",      "path": ["pharmacy"]},
+    "E": {"label": "Consultation + lab (no return)", "path": ["triage", "doctor", "lab"]},
+    "F": {"label": "Consultation + lab + pharmacy", "path": ["triage", "doctor", "lab", "pharmacy"]},
+    "Z": {"label": "Emergency Transfer", "path": ["triage", "emergency"]}
 }
 
 def choose_journey(acuity: int, complaint: str | None) -> str:

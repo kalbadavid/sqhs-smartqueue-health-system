@@ -5,6 +5,7 @@ const TONE = {
   doctor:   'bg-doctor-50 text-doctor-900 ring-doctor-600/15',
   lab:      'bg-lab-50 text-lab-900 ring-lab-600/15',
   pharmacy: 'bg-pharmacy-50 text-pharmacy-900 ring-pharmacy-600/15',
+  emergency: 'bg-alert-50 text-alert-900 ring-alert-600/15',
 };
 
 export default function StationBadge({ station, size = 'sm' }) {

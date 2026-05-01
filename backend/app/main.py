@@ -41,8 +41,8 @@ def on_startup() -> None:
     loaded = models_loaded()
     log.info(f"Model load status: {loaded}")
     if not all(loaded.values()):
-        log.warning("Some models failed to load — endpoints will use deterministic "
-                    "fallbacks for missing stations.")
+        log.info("Note: ML models are missing for some stations. This is normal for "
+                 "new stations (like emergency) and they will safely use queue-theoretic fallbacks.")
 
     if settings.seed_on_startup:
         log.info("Seeding database...")

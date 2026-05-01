@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import StationBadge from '../components/StationBadge';
@@ -38,10 +39,20 @@ export default function Triage() {
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const location = useLocation();
+  const preSelectedId = location.state?.selectedPatientId;
+
   const refresh = async () => {
     try {
-      setQueue(await getTriageQueue());
+      const q = await getTriageQueue();
+      setQueue(q);
       setLoadError(null);
+      
+      // Auto-select if navigated from dashboard modal
+      if (preSelectedId && !selected && !result) {
+        const p = q.find(x => x.id === preSelectedId);
+        if (p) choose(p);
+      }
     } catch (err) {
       setLoadError(err.message);
     }

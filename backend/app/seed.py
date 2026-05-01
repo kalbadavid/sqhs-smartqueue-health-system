@@ -38,6 +38,7 @@ def seed_database(db: Session) -> None:
             pid = queue_service._new_id()
         p = Patient(
             id=pid, name=name, phone=f"+234 80{(i+3)%10} ••• {1000+i}",
+            email=f"{name.split()[0].lower()}@example.com",
             acuity=acuity, complaint=complaint, journey=journey,
             path=path, cursor=station_idx,
             arrived_at=now - timedelta(minutes=(60 - i*4)),
@@ -52,6 +53,7 @@ def seed_database(db: Session) -> None:
             pid = queue_service._new_id()
         p = Patient(
             id=pid, name=name, phone=f"+234 81{i} ••• {2000+i}",
+            email=f"{name.split()[0].lower()}@example.com",
             acuity=3, complaint="prescription refill", journey="D",
             path=["pharmacy"], cursor=0,
             arrived_at=now - timedelta(minutes=(40 - i*3)),

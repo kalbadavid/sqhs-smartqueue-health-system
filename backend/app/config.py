@@ -7,12 +7,16 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./sqhs.db"
     model_dir: str = "../model"
     cors_origins: str = "http://localhost:5173"
-    seed_on_startup: bool = True
+    seed_on_startup: bool = False
 
     sms_provider: str = "stub"
     at_username: str | None = None
     at_api_key: str | None = None
     at_sender_id: str | None = None
+
+    notification_provider: str = "resend"
+    resend_api_key: str | None = None
+    default_sender_email: str = "onboarding@resend.dev"
 
     @property
     def cors_origins_list(self) -> List[str]:

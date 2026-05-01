@@ -7,7 +7,7 @@ from app.config import settings
 
 log = logging.getLogger(__name__)
 
-STATIONS = ["triage", "doctor", "lab", "pharmacy"]
+STATIONS = ["triage", "doctor", "lab", "pharmacy", "emergency"]
 
 # In-memory cache of loaded artifacts: { "doctor": {"point": ..., "p50": ..., ...} }
 _models: dict[str, dict] = {}
@@ -22,7 +22,7 @@ def load_all_models() -> None:
     for station in STATIONS:
         sdir = os.path.join(base, station)
         if not os.path.isdir(sdir):
-            log.warning(f"Missing model dir for {station}: {sdir} — skipping")
+            log.warning(f"Missing model dir for {station} (expected if new station) — skipping")
             continue
         try:
             _models[station] = {

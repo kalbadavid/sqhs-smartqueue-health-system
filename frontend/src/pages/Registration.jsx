@@ -6,20 +6,24 @@ import { registerPatient } from '../api/api';
 import { ArrowRight, ClipboardCheck, UserPlus } from 'lucide-react';
 
 export default function Registration() {
-  const [form, setForm] = useState({ name: '', phone: '' });
+  const [form, setForm] = useState({ name: '', phone: '', email: '' });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.phone) return;
+    if (!form.name || !form.phone || !form.email) return;
     setSubmitting(true);
+    setError(null);
     try {
       const r = await registerPatient(form);
       setResult(r);
+    } catch (err) {
+      setError(err.message.replace('Value error, ', ''));
     } finally {
       setSubmitting(false);
     }
@@ -45,16 +49,17 @@ export default function Registration() {
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-5">
                   <Field label="Name" value={result.name} />
                   <Field label="Phone" value={result.phone} />
+                  <Field label="Email" value={result.email} />
                   <Field label="Triage queue position" value={`#${result.position}`} />
                   <Field label="Next station" value="Nurse triage" />
                 </div>
                 <div className="rounded-md bg-surface-sunken px-3.5 py-3 text-[12.5px] text-ink-700 leading-relaxed mb-5">
-                  An SMS has been dispatched with the patient's queue position and estimated triage start time.
+                  An SMS and Email have been dispatched with the patient's queue position and estimated triage start time.
                   The patient may leave the waiting area; they will be re-notified before their turn.
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => { setResult(null); setForm({ name: '', phone: '' }); }}
+                    onClick={() => { setResult(null); setForm({ name: '', phone: '', email: '' }); }}
                     className="px-4 py-2 rounded-md text-[13px] bg-surface-sunken text-ink-800 hover:bg-bone-200/70 font-medium select-none"
                   >
                     Register another patient
@@ -111,14 +116,29 @@ export default function Registration() {
                   placeholder="+234 ..."
                   className="w-full px-3.5 py-2.5 rounded-md border border-bone-300 bg-surface-raised text-[14px] text-ink-900 placeholder:text-ink-700/40 focus:outline-none focus:border-ink-900 focus:ring-1 focus:ring-ink-900/15"
                 />
+              </div>
+              <div>
+                <label className="block text-[11.5px] tracking-wide uppercase text-ink-700/70 font-medium mb-1.5">Email address</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={update('email')}
+                  placeholder="name@example.com"
+                  className="w-full px-3.5 py-2.5 rounded-md border border-bone-300 bg-surface-raised text-[14px] text-ink-900 placeholder:text-ink-700/40 focus:outline-none focus:border-ink-900 focus:ring-1 focus:ring-ink-900/15"
+                />
                 <div className="text-[11.5px] text-ink-700/60 mt-1.5 leading-relaxed">
-                  Used to send the patient queue updates via SMS so they can leave the premises and return when called.
+                  Used to send the patient queue updates via SMS and Email so they can leave the premises and return when called.
                 </div>
               </div>
+              {error && (
+                <div className="text-[12.5px] text-red-600 bg-red-50 px-3.5 py-2.5 rounded-md border border-red-100 font-medium leading-relaxed">
+                  {error}
+                </div>
+              )}
               <div className="pt-2 flex items-center gap-3">
                 <button
                   type="submit"
-                  disabled={submitting || !form.name || !form.phone}
+                  disabled={submitting || !form.name || !form.phone || !form.email}
                   className="px-5 py-2.5 rounded-md text-[13.5px] bg-ink-900 text-bone-50 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-ink-700 inline-flex items-center gap-2 select-none"
                 >
                   {submitting ? 'Registering…' : (<>Register and assign queue position <ArrowRight className="size-3.5" strokeWidth={2} /></>)}
@@ -135,7 +155,7 @@ export default function Registration() {
             <CardBody className="text-[12.5px] text-ink-700 leading-relaxed space-y-2.5">
               <div className="flex gap-2.5">
                 <Step n="1" />
-                <span>Patient gets a queue position and SMS notification.</span>
+                <span>Patient gets a queue position and SMS/Email notification.</span>
               </div>
               <div className="flex gap-2.5">
                 <Step n="2" />

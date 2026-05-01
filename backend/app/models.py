@@ -7,6 +7,7 @@ class Patient(Base):
     id          = Column(String(8), primary_key=True)
     name        = Column(String(120), nullable=False)
     phone       = Column(String(40), nullable=False)
+    email       = Column(String(120), nullable=False)
     acuity      = Column(Integer, nullable=True)
     complaint   = Column(String(200), nullable=True)
     journey     = Column(String(2), nullable=True)
@@ -31,3 +32,14 @@ class SMSLog(Base):
     body       = Column(String(2000), nullable=False)
     sent_at    = Column(DateTime, nullable=False, default=datetime.utcnow)
     provider   = Column(String(20), nullable=False, default="stub")
+
+class EmailLog(Base):
+    __tablename__ = "email_log"
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    patient_id = Column(String(8), nullable=False, index=True)
+    email      = Column(String(120), nullable=False)
+    subject    = Column(String(200), nullable=False)
+    body       = Column(String(4000), nullable=False)
+    sent_at    = Column(DateTime, nullable=False, default=datetime.utcnow)
+    provider   = Column(String(20), nullable=False, default="resend")
+

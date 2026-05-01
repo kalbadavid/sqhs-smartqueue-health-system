@@ -41,12 +41,14 @@ function StationCard({ s, expanded, onToggle, onPatientChange }) {
     doctor: { bg: 'bg-doctor-200/55', fill: 'bg-doctor-600' },
     lab: { bg: 'bg-lab-200/55', fill: 'bg-lab-600' },
     pharmacy: { bg: 'bg-pharmacy-200/60', fill: 'bg-pharmacy-600' },
+    emergency: { bg: 'bg-alert-200/60', fill: 'bg-alert-600' },
   }[meta.tone];
   const headerBg = {
     triage: 'bg-triage-50/80 border-triage-600/15',
     doctor: 'bg-doctor-50/80 border-doctor-600/15',
     lab: 'bg-lab-50/80 border-lab-600/15',
     pharmacy: 'bg-pharmacy-50/80 border-pharmacy-600/15',
+    emergency: 'bg-alert-50/80 border-alert-600/15',
   }[meta.tone];
   const flashing = useChangeFlash(s.inQueue);
 
@@ -91,7 +93,7 @@ function StationCard({ s, expanded, onToggle, onPatientChange }) {
             <AnimatedNumber value={s.waitP90} /> min
           </span>
         } />
-        <Row label="Servers active" value={<span className={`tnum text-[13.5px] ${isHot ? 'text-alert-600 font-medium' : 'text-ink-700'}`}>{s.servers} / {s.servers}</span>} />
+        <Row label={`${meta.role} on duty`} value={<span className={`tnum text-[13.5px] ${isHot ? 'text-alert-600 font-medium' : 'text-ink-700'}`}>{s.servers}</span>} />
         <div className={`mt-2 h-1 rounded-full ${accentBars.bg} relative overflow-hidden`}>
           <div className={`absolute inset-y-0 left-0 ${accentBars.fill} rounded-full bar-fill`} style={{ width: `${Math.round(s.utilization * 100)}%` }} />
         </div>
@@ -202,13 +204,13 @@ export default function Dashboard() {
 
   return (
     <div className="page-enter">
-      <PageHeader eyebrow="Live · 4 stations" title="Network operations" subtitle="Real-time view of patient flow across the outpatient department, modelled as an Open Jackson queueing network." />
+      <PageHeader eyebrow="Live · 5 stations" title="Network operations" subtitle="Real-time view of patient flow across the outpatient department, modelled as an Open Jackson queueing network." />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Kpi 
           icon={Users} 
           label="Patients in network" 
           value={<AnimatedNumber value={summary.totalPatients} />} 
-          footnote="across 4 stations" 
+          footnote="across 5 stations" 
         />
         <Kpi 
           icon={Clock} 
@@ -230,7 +232,7 @@ export default function Dashboard() {
           label="Model accuracy (24h MAE)" 
           value={<AnimatedNumber value={summary.modelMaeMinutes} format={(v) => v.toFixed(1)} />} 
           suffix="min" 
-          footnote="across 4 station models" 
+          footnote="across 5 station models" 
           tone="text-success-600" 
         />
       </div>
@@ -238,7 +240,7 @@ export default function Dashboard() {
         <h2 className="text-lg text-ink-900 tracking-tight font-semibold">Live queue — by station</h2>
         <LiveIndicator lastUpdated={lastUpdated} />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-7">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-7">
         {summary.stations.map(s => (
           <StationCard
             key={s.station}
