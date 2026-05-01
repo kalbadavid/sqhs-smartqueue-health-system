@@ -1,0 +1,5 @@
+Journey,Path,Mean P50 (min),Mean P90 (min),Mean band width (min)
+A,triage → doctor → pharmacy,48.7,130.0,81.3
+B,triage → doctor → lab → doctor → pharmacy,93.3,266.3,173.0
+C,triage → lab,15.8,63.3,47.5
+D,pharmacy,20.3,53.0,32.7

@@ -1,0 +1,4 @@
+Model,MAE,MSE,RMSE,R2
+Triage — Linear Regression,1.137,3.458,1.86,0.001
+Triage — XGBoost (point),1.126,3.437,1.854,0.007
+Triage — XGBoost P50,0.767,4.046,2.012,-0.169

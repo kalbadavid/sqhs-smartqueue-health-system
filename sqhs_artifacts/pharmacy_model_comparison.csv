@@ -1,0 +1,4 @@
+Model,MAE,MSE,RMSE,R2
+Pharmacy — Linear Regression,17.638,541.252,23.265,0.156
+Pharmacy — XGBoost (point),16.515,473.595,21.762,0.262
+Pharmacy — XGBoost P50,16.328,519.329,22.789,0.191

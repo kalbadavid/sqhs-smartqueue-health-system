@@ -1,0 +1,5 @@
+Model,MAE,MSE,RMSE,R2
+Linear Regression,25.461,1744.439,41.766,0.067
+Random Forest,24.399,1664.766,40.802,0.11
+XGBoost (point),23.97,1626.774,40.333,0.13
+XGBoost Quantile P50,22.059,1754.137,41.882,0.062

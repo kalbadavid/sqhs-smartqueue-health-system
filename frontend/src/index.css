@@ -1,1 +1,296 @@
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  /* ── Bone / Ink neutrals (warm-tinted, never pure black/white) ── */
+  --color-bone-50: #FAF8F4;
+  --color-bone-100: #F4F1EA;
+  --color-bone-200: #E8E3D7;
+  --color-bone-300: #D4CCB8;
+  --color-ink-700: #2A2823;
+  --color-ink-800: #1F1D1A;
+  --color-ink-900: #141311;
+
+  /* ── Semantic surface tokens (light mode) ── */
+  --color-surface: #FDFCFA;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-sunken: #F4F1EA;
+
+  /* ── Station accent palettes ── */
+  --color-triage-50:    #FAECE7;
+  --color-triage-200:   #F0997B;
+  --color-triage-600:   #993C1D;
+  --color-triage-900:   #4A1B0C;
+
+  --color-doctor-50:    #EEEDFE;
+  --color-doctor-200:   #AFA9EC;
+  --color-doctor-600:   #534AB7;
+  --color-doctor-900:   #26215C;
+
+  --color-lab-50:       #E1F5EE;
+  --color-lab-200:      #5DCAA5;
+  --color-lab-600:      #0F6E56;
+  --color-lab-900:      #04342C;
+
+  --color-pharmacy-50:  #FAEEDA;
+  --color-pharmacy-200: #E0B669;
+  --color-pharmacy-600: #854F0B;
+  --color-pharmacy-900: #412402;
+
+  --color-alert-50:     #FCEBEB;
+  --color-alert-600:    #A32D2D;
+  --color-alert-900:    #501313;
+  --color-success-50:   #EAF3DE;
+  --color-success-600:  #3B6D11;
+}
+
+/* ──────────────────────────────────────────────
+   DARK MODE
+   Layered surface system: page < card < input
+   Each step ~+6 lightness for depth perception
+   ────────────────────────────────────────────── */
+.dark {
+  /* Neutrals — inverted for dark surfaces */
+  --color-bone-50:  #121110;
+  --color-bone-100: #181715;
+  --color-bone-200: #242220;
+  --color-bone-300: #37342F;
+  --color-ink-700: #B8B3A6;
+  --color-ink-800: #DBD6C9;
+  --color-ink-900: #F0EDE5;
+
+  /* Semantic surfaces — layered for depth */
+  --color-surface: #1A1917;
+  --color-surface-raised: #222120;
+  --color-surface-sunken: #121110;
+
+  /* Station tones — re-tuned for dark surfaces.
+     50 = subtle dark background, 900 = light text/accent. */
+  --color-triage-50:    #261810;
+  --color-triage-200:   #6B2D14;
+  --color-triage-600:   #D67B5C;
+  --color-triage-900:   #F5C9B8;
+
+  --color-doctor-50:    #191730;
+  --color-doctor-200:   #2D2870;
+  --color-doctor-600:   #8780E0;
+  --color-doctor-900:   #C5C0F0;
+
+  --color-lab-50:       #0A2520;
+  --color-lab-200:      #115040;
+  --color-lab-600:      #4FBC9C;
+  --color-lab-900:      #B0E5D5;
+
+  --color-pharmacy-50:  #261E0A;
+  --color-pharmacy-200: #5C3F0A;
+  --color-pharmacy-600: #D6A55C;
+  --color-pharmacy-900: #F0DBA8;
+
+  --color-alert-50:     #261010;
+  --color-alert-600:    #E55C5C;
+  --color-alert-900:    #F8C5C5;
+  --color-success-50:   #102A05;
+  --color-success-600:  #7CB540;
+}
+
+/* ──────────────────────────────────────────────
+   BASE
+   ────────────────────────────────────────────── */
+
+html, body {
+  transition: background-color 250ms ease, color 250ms ease;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bone-50);
+  color: var(--color-ink-800);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+}
+
+/* Dark mode: light-on-dark text needs slightly more line-height (Emil) */
+.dark body {
+  line-height: 1.6;
+}
+
+:root {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Theme-aware shadows */
+  --shadow-card: 0 1px 0 0 rgba(0, 0, 0, 0.02), 0 8px 24px -12px rgba(20, 19, 17, 0.08);
+  --shadow-card-hover: 0 4px 16px -4px rgba(20, 19, 17, 0.12);
+  --shadow-nav-active: 0 1px 3px rgba(20, 19, 17, 0.15);
+}
+
+.dark {
+  --shadow-card: 0 1px 0 0 rgba(0, 0, 0, 0.15), 0 8px 24px -12px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 16px -4px rgba(0, 0, 0, 0.5);
+  --shadow-nav-active: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ──────────────────────────────────────────────
+   UTILITIES
+   ────────────────────────────────────────────── */
+.tnum { font-variant-numeric: tabular-nums; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { scrollbar-width: none; }
+
+/* ──────────────────────────────────────────────
+   TACTILE FEEDBACK
+   ────────────────────────────────────────────── */
+button,
+a,
+[role="button"] {
+  transition:
+    transform 160ms var(--ease-out-strong),
+    background-color 200ms var(--ease-out-strong),
+    color 200ms var(--ease-out-strong),
+    border-color 200ms var(--ease-out-strong),
+    box-shadow 200ms var(--ease-out-strong),
+    opacity 200ms var(--ease-out-strong);
+}
+
+button:active:not(:disabled),
+a:active,
+[role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* Input focus transitions with strong easing */
+input, textarea, select {
+  transition:
+    border-color 200ms var(--ease-out-strong),
+    box-shadow 200ms var(--ease-out-strong),
+    background-color 200ms var(--ease-out-strong);
+}
+
+/* ──────────────────────────────────────────────
+   STAGGER ENTRY ANIMATIONS
+   ────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-enter {
+  opacity: 0;
+  animation: fadeInUp 400ms var(--ease-out-strong) forwards;
+}
+
+.stagger-enter:nth-child(1)  { animation-delay: 0ms; }
+.stagger-enter:nth-child(2)  { animation-delay: 40ms; }
+.stagger-enter:nth-child(3)  { animation-delay: 80ms; }
+.stagger-enter:nth-child(4)  { animation-delay: 120ms; }
+.stagger-enter:nth-child(5)  { animation-delay: 160ms; }
+.stagger-enter:nth-child(6)  { animation-delay: 200ms; }
+.stagger-enter:nth-child(7)  { animation-delay: 240ms; }
+.stagger-enter:nth-child(8)  { animation-delay: 280ms; }
+
+/* Page-level stagger for sections */
+.page-enter > * {
+  opacity: 0;
+  animation: fadeInUp 400ms var(--ease-out-strong) forwards;
+}
+
+.page-enter > *:nth-child(1) { animation-delay: 0ms; }
+.page-enter > *:nth-child(2) { animation-delay: 60ms; }
+.page-enter > *:nth-child(3) { animation-delay: 120ms; }
+.page-enter > *:nth-child(4) { animation-delay: 180ms; }
+.page-enter > *:nth-child(5) { animation-delay: 240ms; }
+.page-enter > *:nth-child(6) { animation-delay: 300ms; }
+
+/* ──────────────────────────────────────────────
+   SKELETON SHIMMER — theme-aware
+   ────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bone-200) 25%,
+    var(--color-surface) 50%,
+    var(--color-bone-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ──────────────────────────────────────────────
+   LIVE BREATHING DOT
+   ────────────────────────────────────────────── */
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.breathe {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+/* ──────────────────────────────────────────────
+   UTILIZATION BAR — smooth fill
+   ────────────────────────────────────────────── */
+.bar-fill {
+  transition: width 600ms var(--ease-out-strong);
+}
+
+/* ──────────────────────────────────────────────
+   HOVER GATING
+   ────────────────────────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift {
+    transition: transform 200ms var(--ease-out-strong), box-shadow 200ms var(--ease-out-strong);
+  }
+  .hover-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card-hover);
+  }
+  .hover-lift:active {
+    transform: translateY(0) scale(0.98);
+  }
+}
+
+/* ──────────────────────────────────────────────
+   REDUCED MOTION
+   ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .stagger-enter,
+  .page-enter > * {
+    animation: none;
+    opacity: 1;
+  }
+
+  .breathe {
+    animation: none;
+    opacity: 1;
+  }
+
+  button:active:not(:disabled),
+  a:active,
+  [role="button"]:active {
+    transform: none;
+  }
+
+  .bar-fill {
+    transition: none;
+  }
+}

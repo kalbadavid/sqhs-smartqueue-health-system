@@ -1,0 +1,5 @@
+Station,Source,Actual mean wait (min),Actual P90 wait (min),Predicted P50 mean (min),Predicted P90 mean (min)
+Triage,simulated,0.8,2.9,0.0,2.6
+Doctor,empirical,38.4,80.0,28.7,74.7
+Lab,simulated,23.6,65.9,15.5,60.0
+Pharmacy,simulated,25.1,60.9,20.2,53.2
