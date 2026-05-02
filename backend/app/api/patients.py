@@ -1,12 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from datetime import datetime, date
 from app.db import get_db
+from app.models import Patient
 from app.schemas import (RegisterRequest, RegisterResponse, TriageRequest, JourneyResponse)
 from app.services import queue_service
 from app.services.sms_service import send_sms, format_journey_sms, format_bumped_sms
 from app.services.email_service import send_patient_email, format_journey_email, format_bumped_email
 
 router = APIRouter(prefix="", tags=["patients"])
+
+@router.get("/patients/today-count")
+def get_today_count(db: Session = Depends(get_db)):
+    start_of_day = datetime.combine(date.today(), datetime.min.time())
+    count = db.query(Patient).filter(Patient.arrived_at >= start_of_day).count()
+    return {"count": count}
 
 @router.post("/patients", response_model=RegisterResponse)
 def register(req: RegisterRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

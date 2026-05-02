@@ -48,6 +48,10 @@ export async function registerPatient({ name, phone, email }) {
   });
 }
 
+export async function getTodayPatientCount() {
+  return api('/patients/today-count');
+}
+
 export async function triagePatient({ id, acuity, complaint }) {
   return api('/journey', {
     method: 'POST',

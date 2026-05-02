@@ -56,7 +56,7 @@ function StationCard({ s, expanded, onToggle, onPatientChange }) {
 
   return (
     <Card 
-      className={`overflow-hidden transition-colors duration-700 ${expanded ? '' : 'hover-lift cursor-pointer'} ${isHot ? 'ring-2 ring-alert-600/40' : ''} ${flashing ? 'bg-success-50/30 motion-reduce:bg-transparent' : ''}`} 
+      className={`overflow-hidden flex flex-col h-full transition-colors duration-700 ${expanded ? '' : 'hover-lift cursor-pointer'} ${isHot ? 'ring-2 ring-alert-600/40' : ''} ${flashing ? 'bg-success-50/30 motion-reduce:bg-transparent' : ''}`} 
       accent
       onClick={!expanded ? onToggle : undefined}
     >
@@ -79,7 +79,7 @@ function StationCard({ s, expanded, onToggle, onPatientChange }) {
           </div>
         </div>
       </button>
-      <div className="px-4 py-3.5 space-y-2.5">
+      <div className="px-4 py-3.5 space-y-2.5 flex-1 flex flex-col">
         <Row label="In queue" value={
           <span className={`tnum text-[26px] leading-none font-semibold ${isHot ? 'text-alert-600' : 'text-ink-900'}`}>
             <AnimatedNumber value={s.inQueue} />
@@ -96,8 +96,10 @@ function StationCard({ s, expanded, onToggle, onPatientChange }) {
           </span>
         } />
         <Row label={`${meta.role} on duty`} value={<span className={`tnum text-[13.5px] ${isHot ? 'text-alert-600 font-medium' : 'text-ink-700'}`}>{s.servers}</span>} />
-        <div className={`mt-2 h-1 rounded-full ${accentBars.bg} relative overflow-hidden`}>
-          <div className={`absolute inset-y-0 left-0 ${accentBars.fill} rounded-full bar-fill`} style={{ width: `${Math.round(s.utilization * 100)}%` }} />
+        <div className="mt-auto pt-2.5">
+          <div className={`h-1 rounded-full ${accentBars.bg} relative overflow-hidden`}>
+            <div className={`absolute inset-y-0 left-0 ${accentBars.fill} rounded-full bar-fill`} style={{ width: `${Math.round(s.utilization * 100)}%` }} />
+          </div>
         </div>
       </div>
       {expanded && <StationPatientList station={s.station} onChange={onPatientChange} />}

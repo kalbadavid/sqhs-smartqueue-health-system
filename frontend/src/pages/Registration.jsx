@@ -1,16 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import PageHeader from '../components/PageHeader';
-import { registerPatient } from '../api/api';
+import { registerPatient, getTodayPatientCount } from '../api/api';
 import { ArrowRight, ClipboardCheck, UserPlus } from 'lucide-react';
+import AnimatedNumber from '../components/AnimatedNumber';
 
 export default function Registration() {
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [todayCount, setTodayCount] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    getTodayPatientCount().then(res => setTodayCount(res.count)).catch(console.error);
+  }, [result]);
 
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -170,7 +176,9 @@ export default function Registration() {
           <Card>
             <CardBody className="py-3.5">
               <div className="text-[11px] tracking-[0.14em] uppercase text-ink-700/60 font-medium mb-1">Today</div>
-              <div className="text-2xl tnum text-ink-900 font-bold">47</div>
+              <div className="text-2xl tnum text-ink-900 font-bold">
+                {todayCount !== null ? <AnimatedNumber value={todayCount} /> : <span className="text-ink-700/40">--</span>}
+              </div>
               <div className="text-[12px] text-ink-700/70">patients registered</div>
             </CardBody>
           </Card>
