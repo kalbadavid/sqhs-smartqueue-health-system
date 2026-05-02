@@ -68,7 +68,8 @@ def format_journey_sms(patient_name: str, stages: list, estimated_finish: str = 
         elif pos == servers:
             # They just crossed the threshold to enter!
             return (f"Queue Update: Hello {first_name}, you are now NEXT for {station_name}.\n"
-                    f"Please proceed to the {station_name} station immediately.")
+                    f"Please proceed to the {station_name} station immediately. "
+                    f"You have 5 minutes to arrive before you are skipped.")
         else:
             # Normal position update
             return (f"Queue Update: Hello {first_name}, you are still waiting for {station_name}.\n"
@@ -79,7 +80,8 @@ def format_journey_sms(patient_name: str, stages: list, estimated_finish: str = 
         # Not an update (just joined the queue)
         if pos <= servers:
             return (f"Hello {first_name}, you are NEXT for {station_name}.\n"
-                    f"Please proceed to the {station_name} station immediately.")
+                    f"Please proceed to the {station_name} station immediately. "
+                    f"You have 5 minutes to arrive before you are skipped.")
         else:
             return (f"Hello {first_name}, you are now waiting for {station_name}.\n"
                     f"Queue position: #{pos}\n"
@@ -118,7 +120,7 @@ def format_bumped_sms(patient_name: str, stages: list, reason: str = None) -> st
     if p50 == 0:
         return (f"Hello {first_name}, your wait time for {station_name} has been updated because {reason_text}.\n"
                 f"New queue position: #{pos}\n"
-                f"You are still NEXT in line. Please proceed to the {station_name} station immediately.")
+                f"You are still NEXT in line. Please proceed to the {station_name} station immediately. You have 5 minutes to arrive before you are skipped.")
                 
     return (f"Hello {first_name}, your wait time for {station_name} has been updated because {reason_text}.\n"
             f"New queue position: #{pos}\n"

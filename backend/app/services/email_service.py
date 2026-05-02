@@ -103,7 +103,8 @@ def format_journey_email(name: str, stages: list[dict], estimated_finish: str | 
             # They just crossed the threshold to enter!
             body = (f"<p>Queue Update: Hello {first_name}, you are now <strong>NEXT</strong> for "
                     f"<strong>{station_name}</strong>.</p>"
-                    f"<p>Please proceed to the {station_name} station <strong>immediately</strong>.</p>")
+                    f"<p>Please proceed to the {station_name} station <strong>immediately</strong>. "
+                    f"You have 5 minutes to arrive before your turn is automatically skipped.</p>")
             return subject, body
         else:
             # Normal position update
@@ -118,7 +119,8 @@ def format_journey_email(name: str, stages: list[dict], estimated_finish: str | 
         if pos <= servers:
             body = (f"<p>Hello {first_name}, you are <strong>NEXT</strong> for "
                     f"<strong>{station_name}</strong>.</p>"
-                    f"<p>Please proceed to the {station_name} station <strong>immediately</strong>.</p>")
+                    f"<p>Please proceed to the {station_name} station <strong>immediately</strong>. "
+                    f"You have 5 minutes to arrive before your turn is automatically skipped.</p>")
             return subject, body
         else:
             body = f"<p>Hello {first_name}, you are now waiting for <strong>{station_name}</strong>.</p>"
@@ -161,7 +163,7 @@ def format_bumped_email(name: str, stages: list[dict], reason: str = None) -> tu
     if current.get("position") is not None:
         body += f"<p>New queue position: <strong>#{current['position']}</strong></p>"
         if p50 == 0:
-            body += f"<p>You are still <strong>NEXT</strong> in line. Please proceed to the {station_name} station <strong>immediately</strong>.</p>"
+            body += f"<p>You are still <strong>NEXT</strong> in line. Please proceed to the {station_name} station <strong>immediately</strong>. You have 5 minutes to arrive before your turn is automatically skipped.</p>"
         else:
             body += f"<p>New estimated time: <strong>{current.get('estStart', '?')} - {current.get('estEnd', '?')}</strong></p>"
         body += journey_path

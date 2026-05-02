@@ -10,6 +10,8 @@ import useChangeFlash from '../hooks/useChangeFlash';
 import AnimatedNumber from '../components/AnimatedNumber';
 import StationPatientList from '../components/StationPatientList';
 
+import AnalyticsView from '../components/AnalyticsView';
+
 const REC_STYLES = {
   critical: { wrap: 'border-alert-600/30 bg-alert-50/60', icon: AlertCircle, iconColor: 'text-alert-600', title: 'text-alert-900' },
   warning: { wrap: 'border-pharmacy-600/30 bg-pharmacy-50/60', icon: AlertTriangle, iconColor: 'text-pharmacy-600', title: 'text-pharmacy-900' },
@@ -165,6 +167,7 @@ export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [expandedStation, setExpandedStation] = useState(null);
+  const [viewMode, setViewMode] = useState('live'); // 'live' or 'analytics'
 
   useEffect(() => {
     let live = true;
@@ -204,8 +207,19 @@ export default function Dashboard() {
 
   return (
     <div className="page-enter">
-      <PageHeader eyebrow="Live · 5 stations" title="Network operations" subtitle="Real-time view of patient flow across the outpatient department, modelled as an Open Jackson queueing network." />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="flex items-center justify-between">
+        <PageHeader eyebrow={viewMode === 'live' ? "Live · 5 stations" : "Historical · Past 7 Days"} title="Network operations" subtitle={viewMode === 'live' ? "Real-time view of patient flow across the outpatient department, modelled as an Open Jackson queueing network." : "Historical queue analytics, daily performance, and predictive staffing insights based on historical trends."} />
+        <div className="flex bg-bone-200/50 p-1 rounded-lg border border-bone-200 shrink-0">
+          <button onClick={() => setViewMode('live')} className={`px-4 py-1.5 rounded-md text-[13px] font-medium transition-colors ${viewMode === 'live' ? 'bg-surface-raised shadow-sm text-ink-900 border border-bone-200' : 'text-ink-700/70 hover:text-ink-900'}`}>Live</button>
+          <button onClick={() => setViewMode('analytics')} className={`px-4 py-1.5 rounded-md text-[13px] font-medium transition-colors ${viewMode === 'analytics' ? 'bg-surface-raised shadow-sm text-ink-900 border border-bone-200' : 'text-ink-700/70 hover:text-ink-900'}`}>Analytics</button>
+        </div>
+      </div>
+      
+      {viewMode === 'analytics' ? (
+        <AnalyticsView days={7} />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Kpi 
           icon={Users} 
           label="Patients in network" 
@@ -332,6 +346,10 @@ export default function Dashboard() {
         </div>,
         document.body
       )}
+      
+        </>
+      )}
+
     </div>
   );
 }

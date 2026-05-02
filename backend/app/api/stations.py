@@ -16,6 +16,11 @@ def get_queue(station: str, db: Session = Depends(get_db)):
     rows = queue_service.list_station_queue(db, station)
     return [QueueRow(**r) for r in rows]
 
+@router.get("/queue/lab/pending", response_model=list[QueueRow])
+def get_pending_lab(db: Session = Depends(get_db)):
+    rows = queue_service.list_pending_lab_results(db)
+    return [QueueRow(**r) for r in rows]
+
 @router.post("/station/{station}/complete", response_model=JourneyResponse)
 def complete_station(station: str, req: CompleteRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if station not in STATIONS:
@@ -58,3 +63,58 @@ def complete_station(station: str, req: CompleteRequest, background_tasks: Backg
                 background_tasks.add_task(send_patient_email, advanced_id, a_journey["patient"]["email"], a_subj, a_body)
             
     return journey
+
+@router.post("/station/{station}/enter")
+def enter_station(station: str, req: CompleteRequest, db: Session = Depends(get_db)):
+    """Mark a patient as having entered the station room."""
+    if station not in STATIONS:
+        raise HTTPException(status_code=400, detail=f"Unknown station: {station}")
+    try:
+        queue_service.enter_patient(db, station, req.patient_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Patient not found in queue")
+    return {"status": "entered", "patient_id": req.patient_id}
+
+@router.post("/station/lab/collect")
+def collect_sample(req: CompleteRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Mark a patient's sample as collected, moving them to pending_results."""
+    try:
+        p, advanced_ids = queue_service.collect_lab_sample(db, req.patient_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Patient not found")
+        
+    for advanced_id in advanced_ids:
+        a_journey = queue_service.build_journey_response(db, advanced_id)
+        if a_journey["stages"] and any(s["status"] == "current" for s in a_journey["stages"]):
+            a_sms = format_journey_sms(a_journey["patient"]["name"], a_journey["stages"], a_journey.get("estimatedFinish"), is_update=True)
+            if a_sms:
+                background_tasks.add_task(send_sms, advanced_id, a_journey["patient"]["phone"], a_sms)
+            
+            a_subj, a_body = format_journey_email(a_journey["patient"]["name"], a_journey["stages"], a_journey.get("estimatedFinish"), is_update=True)
+            if a_body:
+                background_tasks.add_task(send_patient_email, advanced_id, a_journey["patient"]["email"], a_subj, a_body)
+                
+    return {"status": "sample_collected"}
+
+@router.post("/station/{station}/skip")
+def skip_patient(station: str, req: CompleteRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Skip a patient who did not present within the timeout window."""
+    if station not in STATIONS:
+        raise HTTPException(status_code=400, detail=f"Unknown station: {station}")
+    try:
+        p, advanced_ids = queue_service.skip_patient(db, station, req.patient_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Notify patients who moved up in the queue
+    for advanced_id in advanced_ids:
+        a_journey = queue_service.build_journey_response(db, advanced_id)
+        if a_journey["stages"] and any(s["status"] == "current" for s in a_journey["stages"]):
+            a_sms = format_journey_sms(a_journey["patient"]["name"], a_journey["stages"], a_journey.get("estimatedFinish"), is_update=True)
+            if a_sms:
+                background_tasks.add_task(send_sms, advanced_id, a_journey["patient"]["phone"], a_sms)
+            a_subj, a_body = format_journey_email(a_journey["patient"]["name"], a_journey["stages"], a_journey.get("estimatedFinish"), is_update=True)
+            if a_body:
+                background_tasks.add_task(send_patient_email, advanced_id, a_journey["patient"]["email"], a_subj, a_body)
+
+    return {"status": "skipped", "patient_id": req.patient_id}

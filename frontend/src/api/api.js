@@ -67,15 +67,30 @@ export async function getStationQueue(station) {
   return api(`/queue/${encodeURIComponent(station)}`);
 }
 
+export async function getPendingLabResults() {
+  return api('/queue/lab/pending');
+}
+
+export async function collectLabSample(patientId) {
+  return api('/station/lab/collect', {
+    method: 'POST',
+    body: JSON.stringify({ patient_id: patientId }),
+  });
+}
+
 export async function getRecommendations() {
   return api('/dashboard/recommendations');
+}
+
+export async function getAnalytics(days = 7) {
+  return api(`/dashboard/analytics?days=${days}`);
 }
 
 export async function advancePatient(patientId, nextJourney = null) {
   // The backend infers the current station from the patient's record, but the
   // path requires us to name a station. We hit /journey first to learn it.
   const journey = await getJourneyForPatient(patientId);
-  const current = journey.stages.find(s => s.status === 'current');
+  const current = journey.stages.find(s => s.status === 'current' || s.status === 'pending_results');
   if (!current) {
     throw new Error('Patient has no current station to advance from');
   }
@@ -85,8 +100,32 @@ export async function advancePatient(patientId, nextJourney = null) {
   });
 }
 
+export async function skipPatient(patientId) {
+  const journey = await getJourneyForPatient(patientId);
+  const current = journey.stages.find(s => s.status === 'current');
+  if (!current) {
+    throw new Error('Patient has no current station to skip from');
+  }
+  return api(`/station/${encodeURIComponent(current.station)}/skip`, {
+    method: 'POST',
+    body: JSON.stringify({ patient_id: patientId }),
+  });
+}
+
 export async function getTriageQueue() {
   return getStationQueue('triage');
+}
+
+export async function enterPatient(patientId) {
+  const journey = await getJourneyForPatient(patientId);
+  const current = journey.stages.find(s => s.status === 'current');
+  if (!current) {
+    throw new Error('Patient has no current station to enter');
+  }
+  return api(`/station/${encodeURIComponent(current.station)}/enter`, {
+    method: 'POST',
+    body: JSON.stringify({ patient_id: patientId }),
+  });
 }
 
 // ------------------------------------------------------------

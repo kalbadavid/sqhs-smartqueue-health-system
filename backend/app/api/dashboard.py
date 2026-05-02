@@ -1,8 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from collections import defaultdict
 from app.db import get_db
-from app.schemas import DashboardSummary, StationStats, Recommendation
+from app.models import DailyStationLog
+from app.schemas import DashboardSummary, StationStats, Recommendation, AnalyticsResponse, DailyStationLogSchema, PredictiveInsight
 from app.services import queue_service
 from app.services.queue_service import SERVERS
 from app.ml.predict import predict_queue_wait
@@ -64,3 +67,87 @@ def get_recommendations(db: Session = Depends(get_db)):
         impact="Continue current staffing",
     ))
     return recs
+
+@router.get("/analytics", response_model=AnalyticsResponse)
+def get_analytics(days: int = 7, db: Session = Depends(get_db)):
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    
+    logs = db.query(DailyStationLog).filter(DailyStationLog.date >= cutoff).order_by(DailyStationLog.date.asc()).all()
+    
+    log_schemas = [
+        DailyStationLogSchema(
+            date=l.date.strftime("%Y-%m-%d"),
+            station=l.station,
+            total_patients=l.total_patients,
+            avg_wait_minutes=l.avg_wait_minutes,
+            max_wait_minutes=l.max_wait_minutes
+        ) for l in logs
+    ]
+    
+    # Generate predictive insights based on the historical logs
+    # Group by station and day of week
+    station_day_stats = defaultdict(lambda: defaultdict(list))
+    daily_totals = defaultdict(int)
+    for l in logs:
+        dow = l.date.strftime("%A")
+        station_day_stats[l.station][dow].append(l.total_patients)
+        daily_totals[l.date] += l.total_patients
+
+    # Calculate busiest network day
+    network_dow_stats = defaultdict(list)
+    for date, total in daily_totals.items():
+        dow = date.strftime("%A")
+        network_dow_stats[dow].append(total)
+
+    highest_network_avg = 0
+    busiest_network_day = None
+    for dow, counts in network_dow_stats.items():
+        avg_count = sum(counts) / len(counts)
+        if avg_count > highest_network_avg:
+            highest_network_avg = avg_count
+            busiest_network_day = dow
+
+    insights = []
+    
+    # Network level insight
+    if busiest_network_day and highest_network_avg > 100:
+        insights.append(PredictiveInsight(
+            station="Network",
+            day_of_week=busiest_network_day,
+            expected_surge=f"Expect ~{int(highest_network_avg)} patients overall (High Traffic)",
+            suggestion=f"{busiest_network_day} is historically a high traffic day. We are expecting {int(highest_network_avg)} patients. Contract more staff to avoid overcrowding before reviewing department breakdowns."
+        ))
+
+    # Station level insights
+    for station, dow_data in station_day_stats.items():
+        highest_avg = 0
+        busiest_day = None
+        for dow, counts in dow_data.items():
+            avg_count = sum(counts) / len(counts)
+            if avg_count > highest_avg:
+                highest_avg = avg_count
+                busiest_day = dow
+                
+        # If the highest average is significantly large (>45), generate a recommendation
+        if highest_avg > 45:
+            insights.append(PredictiveInsight(
+                station=station,
+                day_of_week=busiest_day,
+                expected_surge=f"Expect ~{int(highest_avg)} patients (High Traffic)",
+                suggestion=f"Wait times at {station.capitalize()} tend to spike significantly on {busiest_day}s due to the high volume of incoming patients."
+            ))
+            
+    # Default insight if none generated
+    if not insights:
+        insights.append(PredictiveInsight(
+            station="Network",
+            day_of_week="General",
+            expected_surge="Traffic is within normal limits across all days.",
+            suggestion="Maintain current staffing levels."
+        ))
+
+    return AnalyticsResponse(
+        days=days,
+        logs=log_schemas,
+        insights=insights
+    )

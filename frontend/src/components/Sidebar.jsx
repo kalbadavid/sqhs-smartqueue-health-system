@@ -55,10 +55,6 @@ export default function Sidebar() {
             ? <><Sun className="size-[16px]" strokeWidth={1.75} /> Light mode</>
             : <><Moon className="size-[16px]" strokeWidth={1.75} /> Dark mode</>}
         </button>
-        <div className="mt-3 pt-3 border-t border-bone-200 px-2 text-[11px] text-ink-700/60">
-          <div className="font-medium tracking-wide uppercase mb-1">Mocked backend</div>
-          <p className="leading-relaxed">All data is generated in memory. The contract maps 1:1 to the planned FastAPI endpoints.</p>
-        </div>
       </div>
     </aside>
   );

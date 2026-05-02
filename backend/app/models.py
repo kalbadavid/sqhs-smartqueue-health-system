@@ -15,6 +15,8 @@ class Patient(Base):
     cursor      = Column(Integer, nullable=False, default=0)
     arrived_at  = Column(DateTime, nullable=False, default=datetime.utcnow)
     is_drift    = Column(Boolean, default=False)               # synthetic patients
+    lab_status  = Column(String(20), nullable=True)            # pending_results
+    lab_status_at = Column(DateTime, nullable=True)            # when sample collected
 
 class QueueEntry(Base):
     __tablename__ = "queue_entries"
@@ -23,6 +25,8 @@ class QueueEntry(Base):
     patient_id = Column(String(8), nullable=False, index=True)
     position   = Column(Integer, nullable=False)
     enqueued_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    called_at   = Column(DateTime, nullable=True)   # set when position <= servers
+    entered_at  = Column(DateTime, nullable=True)   # set when patient enters room
 
 class SMSLog(Base):
     __tablename__ = "sms_log"
@@ -42,4 +46,13 @@ class EmailLog(Base):
     body       = Column(String(4000), nullable=False)
     sent_at    = Column(DateTime, nullable=False, default=datetime.utcnow)
     provider   = Column(String(20), nullable=False, default="resend")
+
+class DailyStationLog(Base):
+    __tablename__ = "daily_station_logs"
+    id               = Column(Integer, primary_key=True, autoincrement=True)
+    date             = Column(DateTime, nullable=False, index=True) # Usually the date component
+    station          = Column(String(20), nullable=False, index=True)
+    total_patients   = Column(Integer, nullable=False, default=0)
+    avg_wait_minutes = Column(Float, nullable=False, default=0.0)
+    max_wait_minutes = Column(Float, nullable=False, default=0.0)
 

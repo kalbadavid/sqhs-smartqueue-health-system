@@ -57,6 +57,7 @@ class PatientPublic(BaseModel):
     complaint: Optional[str] = None
     journey: Optional[str] = None
     journeyLabel: Optional[str] = None
+    labStatus: Optional[str] = None
 
 class JourneyStage(BaseModel):
     station: str
@@ -81,6 +82,8 @@ class QueueRow(BaseModel):
     acuity: Optional[int | str] = "—"
     complaint: Optional[str] = None
     waitedMinutes: int
+    calledAt: Optional[str] = None
+    enteredAt: Optional[str] = None
 
 class StationStats(BaseModel):
     station: str
@@ -104,3 +107,21 @@ class Recommendation(BaseModel):
     title: str
     detail: str
     impact: str
+
+class DailyStationLogSchema(BaseModel):
+    date: str
+    station: str
+    total_patients: int
+    avg_wait_minutes: float
+    max_wait_minutes: float
+
+class PredictiveInsight(BaseModel):
+    station: str
+    day_of_week: str
+    expected_surge: str
+    suggestion: str
+
+class AnalyticsResponse(BaseModel):
+    days: int
+    logs: List[DailyStationLogSchema]
+    insights: List[PredictiveInsight]
