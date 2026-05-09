@@ -94,6 +94,10 @@ export async function getRetrainStatus() {
   return api('/dashboard/retrain-status');
 }
 
+export async function getPredictionLogs(days = 7) {
+  return api(`/dashboard/prediction-logs?days=${days}`);
+}
+
 export async function advancePatient(patientId, nextJourney = null) {
   // The backend infers the current station from the patient's record, but the
   // path requires us to name a station. We hit /journey first to learn it.

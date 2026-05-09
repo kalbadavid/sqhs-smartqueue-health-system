@@ -138,3 +138,39 @@ class RetrainStationStatus(BaseModel):
 class RetrainStatusResponse(BaseModel):
     stations: List[RetrainStationStatus]
     any_recommended: bool
+
+# ---------- Prediction Logs Viewer ----------
+class PredictionLogEntry(BaseModel):
+    id: int
+    patient_id: str
+    station: str
+    predicted_p50: float
+    predicted_p90: float
+    actual_wait_min: float
+    error: float                # predicted_p50 - actual_wait_min
+    abs_error: float            # abs(error)
+    position_at_prediction: int
+    predicted_at: str
+    completed_at: str
+
+class StationMaeDetail(BaseModel):
+    station: str
+    mae: float
+    count: int
+    avg_error: float            # signed average (bias direction)
+
+class DailyMaePoint(BaseModel):
+    date: str
+    mae: float
+    count: int
+
+class PredictionLogAnalytics(BaseModel):
+    total_predictions: int
+    overall_mae: Optional[float] = None
+    per_station: List[StationMaeDetail]
+    daily_trend: List[DailyMaePoint]
+
+class PredictionLogsResponse(BaseModel):
+    days: int
+    analytics: PredictionLogAnalytics
+    logs: List[PredictionLogEntry]

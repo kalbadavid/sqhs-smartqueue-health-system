@@ -9,6 +9,7 @@ import LiveIndicator from '../components/LiveIndicator';
 import useChangeFlash from '../hooks/useChangeFlash';
 import AnimatedNumber from '../components/AnimatedNumber';
 import StationPatientList from '../components/StationPatientList';
+import PredictionLogsModal from '../components/PredictionLogsModal';
 
 import AnalyticsView from '../components/AnalyticsView';
 
@@ -171,6 +172,7 @@ export default function Dashboard() {
   const [expandedStation, setExpandedStation] = useState(null);
   const [viewMode, setViewMode] = useState('live'); // 'live' or 'analytics'
   const [retrainStatus, setRetrainStatus] = useState(null);
+  const [predLogsOpen, setPredLogsOpen] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -258,17 +260,36 @@ export default function Dashboard() {
           footnote={`${bottleneck.label} is binding`} 
           tone="text-alert-600" 
         />
-        <Kpi 
-          icon={Gauge} 
-          label={`Model accuracy (${summary.maeSource === 'live' ? '24h' : 'training'} MAE)`}
-          value={<AnimatedNumber value={summary.modelMaeMinutes} format={(v) => v.toFixed(1)} />} 
-          suffix="min" 
-          footnote={summary.maeSource === 'live' 
-            ? `live from ${summary.maePredictionCount} predictions` 
-            : 'from training baseline'}
-          tone="text-success-600" 
-        />
+        <div 
+          onClick={() => setPredLogsOpen(true)}
+          className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98] relative group"
+          title="Click to view raw prediction logs and accuracy analytics"
+        >
+          {/* Periodic soft glow behind the card to attract attention */}
+          <div className="absolute -inset-[1px] rounded-xl bg-success-500/30 blur-sm opacity-60 animate-pulse transition duration-700 group-hover:opacity-100 group-hover:bg-success-400/40"></div>
+          
+          <div className="relative">
+            <Kpi 
+              icon={Gauge} 
+              label={`Model accuracy (${summary.maeSource === 'live' ? '24h' : 'training'} MAE)`}
+              value={<AnimatedNumber value={summary.modelMaeMinutes} format={(v) => v.toFixed(1)} />} 
+              suffix="min" 
+              footnote={summary.maeSource === 'live' 
+                ? `live from ${summary.maePredictionCount} predictions` 
+                : 'from training baseline'}
+              tone="text-success-600" 
+            />
+            {/* Always-visible pulsing text in the bottom right corner */}
+            <div className="absolute bottom-4 right-5">
+               <span className="text-[10px] font-bold text-success-600/70 uppercase tracking-widest animate-pulse group-hover:text-success-600 group-hover:animate-none transition-colors flex items-center gap-1">
+                 View Logs &rarr;
+               </span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {predLogsOpen && <PredictionLogsModal onClose={() => setPredLogsOpen(false)} />}
 
       {/* Retrain reminder banner */}
       {retrainStatus?.any_recommended && (

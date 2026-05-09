@@ -7,7 +7,9 @@ from app.db import get_db
 from app.models import DailyStationLog
 from app.schemas import (DashboardSummary, StationStats, Recommendation,
                          AnalyticsResponse, DailyStationLogSchema, PredictiveInsight,
-                         RetrainStatusResponse, RetrainStationStatus)
+                         RetrainStatusResponse, RetrainStationStatus,
+                         PredictionLogsResponse, PredictionLogAnalytics,
+                         PredictionLogEntry, StationMaeDetail, DailyMaePoint)
 from app.services import queue_service
 from app.services.queue_service import SERVERS
 from app.services.prediction_logger import get_live_mae, get_retrain_status
@@ -256,3 +258,96 @@ def retrain_status(db: Session = Depends(get_db)):
         stations=station_list,
         any_recommended=any(s.retrain_recommended for s in station_list),
     )
+
+@router.get("/prediction-logs", response_model=PredictionLogsResponse)
+def prediction_logs(days: int = 7, db: Session = Depends(get_db)):
+    """Return raw prediction logs + analytics for the prediction logs viewer."""
+    from sqlalchemy import select, func, cast, Date
+    from app.models import PredictionLog
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    # --- Raw rows (newest first, capped at 200) ---
+    rows = db.execute(
+        select(PredictionLog)
+        .where(
+            PredictionLog.actual_wait_min != None,  # noqa: E711
+            PredictionLog.completed_at >= cutoff,
+        )
+        .order_by(PredictionLog.completed_at.desc())
+        .limit(200)
+    ).scalars().all()
+
+    log_entries = []
+    for r in rows:
+        error = round(r.predicted_p50 - r.actual_wait_min, 1)
+        log_entries.append(PredictionLogEntry(
+            id=r.id,
+            patient_id=r.patient_id,
+            station=r.station,
+            predicted_p50=round(r.predicted_p50, 1),
+            predicted_p90=round(r.predicted_p90, 1),
+            actual_wait_min=round(r.actual_wait_min, 1),
+            error=error,
+            abs_error=round(abs(error), 1),
+            position_at_prediction=r.position_at_prediction,
+            predicted_at=r.predicted_at.strftime("%Y-%m-%d %H:%M"),
+            completed_at=r.completed_at.strftime("%Y-%m-%d %H:%M"),
+        ))
+
+    # --- Per-station MAE ---
+    station_rows = db.execute(
+        select(
+            PredictionLog.station,
+            func.avg(func.abs(PredictionLog.predicted_p50 - PredictionLog.actual_wait_min)).label("mae"),
+            func.avg(PredictionLog.predicted_p50 - PredictionLog.actual_wait_min).label("avg_error"),
+            func.count(PredictionLog.id).label("n"),
+        ).where(
+            PredictionLog.actual_wait_min != None,  # noqa: E711
+            PredictionLog.completed_at >= cutoff,
+        ).group_by(PredictionLog.station)
+    ).all()
+
+    per_station = []
+    total_mae_sum, total_n = 0.0, 0
+    for station, mae, avg_err, n in station_rows:
+        per_station.append(StationMaeDetail(
+            station=station,
+            mae=round(mae, 1),
+            count=n,
+            avg_error=round(avg_err, 1),
+        ))
+        total_mae_sum += mae * n
+        total_n += n
+
+    overall_mae = round(total_mae_sum / total_n, 1) if total_n > 0 else None
+
+    # --- Daily MAE trend ---
+    daily_rows = db.execute(
+        select(
+            func.date(PredictionLog.completed_at).label("day"),
+            func.avg(func.abs(PredictionLog.predicted_p50 - PredictionLog.actual_wait_min)).label("mae"),
+            func.count(PredictionLog.id).label("n"),
+        ).where(
+            PredictionLog.actual_wait_min != None,  # noqa: E711
+            PredictionLog.completed_at >= cutoff,
+        ).group_by(func.date(PredictionLog.completed_at))
+        .order_by(func.date(PredictionLog.completed_at))
+    ).all()
+
+    daily_trend = [
+        DailyMaePoint(date=str(day), mae=round(mae, 1), count=n)
+        for day, mae, n in daily_rows
+    ]
+
+    return PredictionLogsResponse(
+        days=days,
+        analytics=PredictionLogAnalytics(
+            total_predictions=total_n,
+            overall_mae=overall_mae,
+            per_station=per_station,
+            daily_trend=daily_trend,
+        ),
+        logs=log_entries,
+    )
+
