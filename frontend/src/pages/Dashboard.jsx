@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import StationBadge from '../components/StationBadge';
-import { getQueueSummary, getRecommendations, STATION_META } from '../api/api';
-import { AlertTriangle, AlertCircle, CheckCircle2, Users, Clock, Gauge, Target, ChevronDown } from 'lucide-react';
+import { getQueueSummary, getRecommendations, getRetrainStatus, STATION_META } from '../api/api';
+import { AlertTriangle, AlertCircle, CheckCircle2, Users, Clock, Gauge, Target, ChevronDown, RefreshCw } from 'lucide-react';
 import LiveIndicator from '../components/LiveIndicator';
 import useChangeFlash from '../hooks/useChangeFlash';
 import AnimatedNumber from '../components/AnimatedNumber';
@@ -170,6 +170,7 @@ export default function Dashboard() {
   const [loadError, setLoadError] = useState(null);
   const [expandedStation, setExpandedStation] = useState(null);
   const [viewMode, setViewMode] = useState('live'); // 'live' or 'analytics'
+  const [retrainStatus, setRetrainStatus] = useState(null);
 
   useEffect(() => {
     let live = true;
@@ -188,6 +189,20 @@ export default function Dashboard() {
     };
     load();
     const t = setInterval(load, 5000);
+    return () => { live = false; clearInterval(t); };
+  }, []);
+
+  // Retrain status — check every 60s (slower than queue polling)
+  useEffect(() => {
+    let live = true;
+    const check = async () => {
+      try {
+        const status = await getRetrainStatus();
+        if (live) setRetrainStatus(status);
+      } catch (_) { /* silent — non-critical */ }
+    };
+    check();
+    const t = setInterval(check, 60000);
     return () => { live = false; clearInterval(t); };
   }, []);
 
@@ -245,13 +260,42 @@ export default function Dashboard() {
         />
         <Kpi 
           icon={Gauge} 
-          label="Model accuracy (24h MAE)" 
+          label={`Model accuracy (${summary.maeSource === 'live' ? '24h' : 'training'} MAE)`}
           value={<AnimatedNumber value={summary.modelMaeMinutes} format={(v) => v.toFixed(1)} />} 
           suffix="min" 
-          footnote="across 5 station models" 
+          footnote={summary.maeSource === 'live' 
+            ? `live from ${summary.maePredictionCount} predictions` 
+            : 'from training baseline'}
           tone="text-success-600" 
         />
       </div>
+
+      {/* Retrain reminder banner */}
+      {retrainStatus?.any_recommended && (
+        <div className="mb-4 rounded-lg border border-pharmacy-600/30 bg-pharmacy-50/60 px-4 py-3 flex items-start gap-3">
+          <RefreshCw className="size-[18px] mt-0.5 shrink-0 text-pharmacy-600" strokeWidth={1.85} />
+          <div className="flex-1">
+            <div className="text-[13.5px] font-semibold text-pharmacy-900">
+              Model retraining recommended
+            </div>
+            <div className="text-[12.5px] text-ink-700 leading-relaxed mt-0.5">
+              {retrainStatus.stations
+                .filter(s => s.retrain_recommended)
+                .map(s => (
+                  <span key={s.station} className="inline-flex items-center gap-1 mr-3">
+                    <span className="font-medium capitalize">{s.station}</span>
+                    <span className="text-ink-700/70">({s.empirical_samples} samples, {s.days_covered} days)</span>
+                  </span>
+                ))
+              }
+            </div>
+            <div className="text-[11.5px] text-ink-700/70 italic mt-1">
+              Export prediction_logs and retrain via the Jupyter notebook to replace simulated parameters with empirical data.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="text-lg text-ink-900 tracking-tight font-semibold">Live queue — by station</h2>
         <LiveIndicator lastUpdated={lastUpdated} />

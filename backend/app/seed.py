@@ -11,19 +11,8 @@ SEED_PATIENTS = [
     ("Folake Adesina",   3, "prescription refill", 0),
     ("Tunde Bakare",     2, "malaria check", 1),
     ("Chioma Eze",       3, "general consult", 1),
-    ("Aisha Yusuf",      2, "fever and headache", 2),
-    ("Olumide Ade",      3, "urine test", 2),
-    ("Grace Onuoha",     3, "BP follow-up", 0),
-    ("Samuel Iroka",     3, "antibiotics", 0),
-    ("Patience Obi",     3, "general consult", 1),
-    ("Mariam Bello",     3, "sugar test", 2),
-    ("Eze Kalu",         3, "prescription refill", 0),
-    ("Ngozi Ekwueme",    3, "general consult", 1),
 ]
-PHARMA_PAD = [
-    "Yusuf Abubakar", "Hauwa Sani", "Daniel Okafor", "Bukola Aina",
-    "Kelechi Nnamdi", "Halima Bashir", "Emeka Nwosu", "Ifeoma Anya",
-]
+PHARMA_PAD = []
 
 def seed_database(db: Session) -> None:
     now = datetime.utcnow()

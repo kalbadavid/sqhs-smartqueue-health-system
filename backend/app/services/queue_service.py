@@ -8,6 +8,7 @@ from app.models import Patient, QueueEntry
 from app.services.journey import JOURNEYS, choose_journey
 from app.ml.predict import predict_wait
 from app.ml.loader import STATIONS
+from app.services.prediction_logger import log_prediction, record_actual
 
 ALPHA = string.ascii_uppercase.replace("O", "").replace("I", "") + "23456789"
 SERVERS = {"triage": 2, "doctor": 3, "lab": 2, "pharmacy": 2, "emergency": 2}
@@ -197,6 +198,11 @@ def _enqueue(db: Session, station: str, patient_id: str, priority: float = 3.0) 
                       enqueued_at=datetime.utcnow()))
     db.flush()
     _refresh_called_at(db, station)
+
+    # --- Prediction logging: record prediction at enqueue time ---
+    p50, p90 = predict_wait(station, new_pos - 1, s)
+    log_prediction(db, patient_id, station, p50, p90, new_pos)
+
     return bumped_ids
 
 def _dequeue(db: Session, station: str, patient_id: str) -> list[str]:
@@ -205,6 +211,10 @@ def _dequeue(db: Session, station: str, patient_id: str) -> list[str]:
                               QueueEntry.patient_id == patient_id)).scalar_one_or_none()
     if entry is None:
         return []
+
+    # --- Prediction logging: stamp actual wait time on dequeue ---
+    record_actual(db, patient_id, station)
+
     removed_pos = entry.position
     db.delete(entry)
     db.flush()

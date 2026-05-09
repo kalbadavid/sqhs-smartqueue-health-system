@@ -100,6 +100,9 @@ class DashboardSummary(BaseModel):
     bottleneck: StationStats
     stations: List[StationStats]
     modelMaeMinutes: float
+    stationMae: Optional[dict] = None     # per-station MAE: {"triage": 1.2, "doctor": 18.5, ...}
+    maeSource: str = "training"           # "training" (static CSV) or "live" (from prediction logs)
+    maePredictionCount: int = 0           # number of completed predictions used
 
 class Recommendation(BaseModel):
     level: str  # "critical" | "warning" | "ok"
@@ -125,3 +128,13 @@ class AnalyticsResponse(BaseModel):
     days: int
     logs: List[DailyStationLogSchema]
     insights: List[PredictiveInsight]
+
+class RetrainStationStatus(BaseModel):
+    station: str
+    empirical_samples: int
+    days_covered: int
+    retrain_recommended: bool
+
+class RetrainStatusResponse(BaseModel):
+    stations: List[RetrainStationStatus]
+    any_recommended: bool

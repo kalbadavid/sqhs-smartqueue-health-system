@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,7 @@ from app.seed import seed_database
 from app.api.patients import router as patients_router
 from app.api.stations import router as stations_router
 from app.api.dashboard import router as dashboard_router
+from app.services.retrain_checker import retrain_check_loop
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -49,6 +51,11 @@ def on_startup() -> None:
         with SessionLocal() as db:
             seed_database(db)
         log.info("Seed complete.")
+
+    # Launch the retrain checker background loop
+    loop = asyncio.get_event_loop()
+    loop.create_task(retrain_check_loop(interval_hours=24))
+    log.info("Retrain checker background task scheduled.")
 
 @app.get("/", tags=["health"])
 def root():

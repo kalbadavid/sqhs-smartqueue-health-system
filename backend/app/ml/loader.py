@@ -3,7 +3,9 @@ import csv
 import os
 import joblib
 import logging
+from datetime import datetime
 from app.config import settings
+from app.ml import shap_explainer
 
 log = logging.getLogger(__name__)
 
@@ -15,8 +17,12 @@ _models: dict[str, dict] = {}
 # Average MAE across all station models (read from training-notebook CSVs)
 _avg_mae: float | None = None
 
+# Timestamp of when models were loaded (used by retrain checker)
+_model_loaded_at: datetime | None = None
+
 def load_all_models() -> None:
-    global _models
+    global _models, _model_loaded_at
+    _model_loaded_at = datetime.utcnow()
     base = os.path.abspath(settings.model_dir)
     log.info(f"Loading models from {base}")
     for station in STATIONS:
@@ -37,6 +43,13 @@ def load_all_models() -> None:
             log.error(f"  ✗ {station}: failed to load — {e}")
 
     _load_mae_metrics(base)
+
+    # Build SHAP explainer for doctor station (only empirical model)
+    if "doctor" in _models:
+        shap_explainer.build_explainer(
+            model=_models["doctor"]["p50"],
+            feature_names=_models["doctor"]["features"],
+        )
 
 def _load_mae_metrics(base: str) -> None:
     """Read MAE from each station's *_model_comparison.csv and average them."""
@@ -73,12 +86,23 @@ def _load_mae_metrics(base: str) -> None:
     else:
         log.warning("No MAE metrics found — dashboard will use fallback value")
 
-def get_avg_mae() -> float:
-    """Return average MAE across station models, or 8.4 as fallback."""
+def get_static_mae() -> float:
+    """Return static average MAE from training CSVs, or 8.4 as fallback."""
     return _avg_mae if _avg_mae is not None else 8.4
+
+# Backwards-compatible alias
+get_avg_mae = get_static_mae
+
+def get_model_loaded_at() -> datetime | None:
+    """Return when models were last loaded (used by retrain checker)."""
+    return _model_loaded_at
 
 def get_models(station: str) -> dict | None:
     return _models.get(station)
 
 def models_loaded() -> dict[str, bool]:
     return {s: s in _models for s in STATIONS}
+
+def shap_ready() -> bool:
+    """Return True if the SHAP explainer for doctor was built successfully."""
+    return shap_explainer.is_ready()

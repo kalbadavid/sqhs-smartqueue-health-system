@@ -11,3 +11,4 @@ python-dotenv==1.0.1
 pydantic-settings==2.6.1
 africastalking
 resend
+shap>=0.44.0

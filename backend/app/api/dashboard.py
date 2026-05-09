@@ -5,11 +5,15 @@ from sqlalchemy import desc
 from collections import defaultdict
 from app.db import get_db
 from app.models import DailyStationLog
-from app.schemas import DashboardSummary, StationStats, Recommendation, AnalyticsResponse, DailyStationLogSchema, PredictiveInsight
+from app.schemas import (DashboardSummary, StationStats, Recommendation,
+                         AnalyticsResponse, DailyStationLogSchema, PredictiveInsight,
+                         RetrainStatusResponse, RetrainStationStatus)
 from app.services import queue_service
 from app.services.queue_service import SERVERS
+from app.services.prediction_logger import get_live_mae, get_retrain_status
 from app.ml.predict import predict_queue_wait
-from app.ml.loader import STATIONS, get_avg_mae
+from app.ml.loader import STATIONS, get_static_mae, get_model_loaded_at, shap_ready
+from app.ml import shap_explainer
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -29,13 +33,29 @@ def get_summary(db: Session = Depends(get_db)):
     total_patients = sum(s.inQueue for s in station_stats)
     avg_visit = sum(s.waitP50 for s in station_stats) + 25  # +25 baseline service time
 
+    # --- Live MAE from prediction logs (fallback to static training MAE) ---
+    live_mae = get_live_mae(db, days=1)
+    if live_mae["count"] > 0 and live_mae["network"] is not None:
+        mae_value = live_mae["network"]
+        mae_source = "live"
+        station_mae = {k: v for k, v in live_mae.items() if k not in ("network", "count")}
+        mae_count = live_mae["count"]
+    else:
+        mae_value = get_static_mae()
+        mae_source = "training"
+        station_mae = None
+        mae_count = 0
+
     return DashboardSummary(
         timestamp=datetime.utcnow().isoformat(),
         totalPatients=total_patients,
         avgVisitMinutes=avg_visit,
         bottleneck=bottleneck,
         stations=station_stats,
-        modelMaeMinutes=get_avg_mae(),
+        modelMaeMinutes=mae_value,
+        stationMae=station_mae,
+        maeSource=mae_source,
+        maePredictionCount=mae_count,
     )
 
 @router.get("/recommendations", response_model=list[Recommendation])
@@ -43,29 +63,104 @@ def get_recommendations(db: Session = Depends(get_db)):
     summary = get_summary(db)
     recs: list[Recommendation] = []
     b = summary.bottleneck
+
+    # -----------------------------------------------------------------------
+    # Critical bottleneck recommendation
+    # -----------------------------------------------------------------------
     if b.waitP50 >= 35:
+        if b.station == "doctor" and shap_ready():
+            # Live SHAP attribution — top drivers for the current moment
+            drivers = shap_explainer.get_current_drivers(n=2)
+            if drivers:
+                driver_parts = []
+                for d in drivers:
+                    val_str = f" ({d['shap_value']:+.1f} min)" if d["shap_value"] is not None else ""
+                    driver_parts.append(f"**{d['label']}**{val_str}")
+                driver_str = " and ".join(driver_parts)
+                shap_detail = (
+                    f"Doctor is the binding bottleneck at {b.waitP50} min P50 wait. "
+                    f"SHAP attribution for this moment: top drivers are {driver_str}. "
+                    f"Consider adjusting staffing or scheduling to address the dominant factor."
+                )
+            else:
+                # SHAP ready but returned empty (unusual) — use global importance
+                global_top = sorted(
+                    shap_explainer.get_global_importance().items(),
+                    key=lambda x: -x[1]
+                )[:2]
+                top_labels = " and ".join(shap_explainer.human_label(f) for f, _ in global_top)
+                shap_detail = (
+                    f"Doctor is the binding bottleneck at {b.waitP50} min P50 wait. "
+                    f"SHAP analysis of the doctor model identifies {top_labels} "
+                    f"as the primary drivers of wait time variance."
+                )
+        elif b.station == "doctor":
+            # SHAP not ready — static fallback (honest about source)
+            shap_detail = (
+                f"Doctor is the binding bottleneck at {b.waitP50} min P50 wait. "
+                f"Offline SHAP analysis identified arrival hour and day of week "
+                f"as the dominant drivers of wait time at this station."
+            )
+        else:
+            # Non-doctor bottleneck — no SHAP claim, queue-theoretic language only
+            station_label = b.station.capitalize()
+            role = {
+                "pharmacy": "pharmacist", "lab": "technician",
+                "triage": "triage nurse", "emergency": "emergency doctor",
+            }.get(b.station, "staff member")
+            shap_detail = (
+                f"{station_label} is the binding bottleneck at {b.waitP50} min P50 wait. "
+                f"Queue depth ({b.inQueue} patients, {b.servers} server(s)) exceeds service "
+                f"capacity. Adding a {role} would reduce expected wait immediately."
+            )
+
+        _title_roles = {
+            "pharmacy": "pharmacist", "doctor": "doctor",
+            "lab": "technician", "triage": "triage nurse",
+        }
+        _role = _title_roles.get(b.station, "staff member")
+        _prefix = "second " if b.servers == 1 else ""
         recs.append(Recommendation(
-            level="critical", station=b.station,
-            title=f"Add a second {'pharmacist' if b.station == 'pharmacy' else 'staff member'} now",
-            detail=(f"{b.station.capitalize()} is the binding bottleneck at "
-                    f"{b.waitP50} min P50 wait. SHAP attributes the dominant "
-                    f"share of wait variance to current queue depth and arrival hour."),
+            level="critical",
+            station=b.station,
+            title=f"Add a {_prefix}{_role} now",
+            detail=shap_detail,
             impact="Estimated total visit time ↓ ~22 min on average",
         ))
+
+    # -----------------------------------------------------------------------
+    # Lab surge warning — queue-theoretic (no SHAP claim for simulated station)
+    # -----------------------------------------------------------------------
     lab = next((s for s in summary.stations if s.station == "lab"), None)
     if lab and lab.inQueue >= 7:
         recs.append(Recommendation(
-            level="warning", station="lab",
+            level="warning",
+            station="lab",
             title="Lab queue trending up — prepare for surge",
-            detail="Predicted lab arrivals in next 30 min exceed baseline by ~75%.",
-            impact="Hold one technician from break rotation until 12:00",
+            detail=(
+                f"Lab has {lab.inQueue} patients queued across {lab.servers} server(s) "
+                f"(P50 wait {lab.waitP50} min). Predicted arrivals in the next 30 min "
+                f"exceed baseline. Hold one technician from break rotation."
+            ),
+            impact="Hold one technician from break rotation until queue clears",
         ))
-    recs.append(Recommendation(
-        level="ok", station="doctor",
-        title="Doctor and triage stations operating within target",
-        detail="No action required. Consultation P90 is below the 45-min threshold.",
-        impact="Continue current staffing",
-    ))
+
+    # -----------------------------------------------------------------------
+    # OK status — doctor + triage
+    # -----------------------------------------------------------------------
+    doctor = next((s for s in summary.stations if s.station == "doctor"), None)
+    if doctor and doctor.waitP50 < 35:
+        recs.append(Recommendation(
+            level="ok",
+            station="doctor",
+            title="Doctor and triage stations operating within target",
+            detail=(
+                f"Consultation P50 is {doctor.waitP50} min — below the 35-min action threshold. "
+                f"No intervention required at this time."
+            ),
+            impact="Continue current staffing",
+        ))
+
     return recs
 
 @router.get("/analytics", response_model=AnalyticsResponse)
@@ -150,4 +245,14 @@ def get_analytics(days: int = 7, db: Session = Depends(get_db)):
         days=days,
         logs=log_schemas,
         insights=insights
+    )
+
+@router.get("/retrain-status", response_model=RetrainStatusResponse)
+def retrain_status(db: Session = Depends(get_db)):
+    """Check each station's empirical data accumulation for retraining readiness."""
+    statuses = get_retrain_status(db, model_loaded_at=get_model_loaded_at())
+    station_list = [RetrainStationStatus(**s) for s in statuses]
+    return RetrainStatusResponse(
+        stations=station_list,
+        any_recommended=any(s.retrain_recommended for s in station_list),
     )

@@ -56,3 +56,16 @@ class DailyStationLog(Base):
     avg_wait_minutes = Column(Float, nullable=False, default=0.0)
     max_wait_minutes = Column(Float, nullable=False, default=0.0)
 
+class PredictionLog(Base):
+    """Logs every wait-time prediction alongside actual wait for live MAE computation."""
+    __tablename__ = "prediction_logs"
+    id                     = Column(Integer, primary_key=True, autoincrement=True)
+    patient_id             = Column(String(8), nullable=False, index=True)
+    station                = Column(String(20), nullable=False, index=True)
+    predicted_p50          = Column(Float, nullable=False)       # predicted wait (P50) in minutes
+    predicted_p90          = Column(Float, nullable=False)       # predicted wait (P90) in minutes
+    actual_wait_min        = Column(Float, nullable=True)        # filled when station completes
+    position_at_prediction = Column(Integer, nullable=False)     # queue position when predicted
+    predicted_at           = Column(DateTime, nullable=False, default=datetime.utcnow)
+    completed_at           = Column(DateTime, nullable=True)     # when station was completed
+
